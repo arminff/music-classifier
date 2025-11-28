@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         String    // "User" or "Administrator"
+  createdAt    DateTime  @default(now()) @map("created_at")
+  failedLogins Int       @default(0) @map("failed_logins")
+  lockedUntil  DateTime? @map("locked_until")
+
+  @@map("users")
+}
+
+model AudioFile {
+  id        Int      @id @default(autoincrement())
+  datasetId Int?     @map("dataset_id")
+  filePath  String   @map("file_path")
+  format    String   // "wav", "mp3"
+  duration  Float
+  createdAt DateTime @default(now()) @map("created_at")
+  dataset   Dataset? @relation(fields: [datasetId], references: [id], onDelete: SetNull)
+  features  FeatureSet?
+  classifications ClassificationResult[]
+
+  @@map("audio_files")
+}
+
+model Dataset {
+  id      Int        @id @default(autoincrement())
+  name    String
+  status  String     // "valid", "invalid"
+  files   AudioFile[]
+
+  @@map("datasets")
+}
+
+model FeatureSet {
+  id          Int       @id @default(autoincrement())
+  audioId     Int       @unique @map("audio_id")
+  sampleRate  Int       @map("sample_rate")
+  mfccVector  String    @map("mfcc_vector") // JSON stringified
+  spectrogram String    // JSON stringified
+  audio       AudioFile @relation(fields: [audioId], references: [id], onDelete: Cascade)
+
+  @@map("feature_sets")
+}
+
+model Model {
+  id             Int               @id @default(autoincrement())
+  algorithmType  String            @map("algorithm_type") // "CNN", "SVM"
+  weightsPath    String            @map("weights_path")
+  hyperparameters String           // JSON stringified
+  createdAt      DateTime          @default(now()) @map("created_at")
+  eval           EvaluationResult?
+  classifications ClassificationResult[]
+
+  @@map("models")
+}
+
+model EvaluationResult {
+  id              Int    @id @default(autoincrement())
+  modelId         Int    @unique @map("model_id")
+  accuracy        Float
+  precision       Float
+  recall          Float
+  f1Score         Float  @map("f1_score")
+  confusionMatrix String @map("confusion_matrix") // JSON
+  createdAt       DateTime @default(now()) @map("created_at")
+  model           Model   @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@map("evaluation_results")
+}
+
+model ClassificationResult {
+  id               Int       @id @default(autoincrement())
+  modelId          Int       @map("model_id")
+  audioId          Int       @map("audio_id")
+  predictedGenre   String    @map("predicted_genre")
+  confidence       Float
+  timestamp        DateTime  @default(now())
+  isHighCertainty  Boolean   @default(false) @map("is_high_certainty")
+  model            Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  audio            AudioFile @relation(fields: [audioId], references: [id], onDelete: Cascade)
+
+  @@map("classification_results")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String
+  timestamp DateTime @default(now())
+
+  @@map("activity_logs")
+}
