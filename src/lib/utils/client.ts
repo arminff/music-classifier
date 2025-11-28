@@ -11,9 +11,9 @@ export async function apiRequest(
 
   const token = localStorage.getItem('token');
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as HeadersInit),
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
@@ -44,7 +44,7 @@ export async function apiRequestFormData(
 
   const token = localStorage.getItem('token');
   
-  const headers: HeadersInit = {};
+  const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
